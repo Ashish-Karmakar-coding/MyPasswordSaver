@@ -1,77 +1,84 @@
-import { useEffect, useState } from 'react';
-import API from '../api';
+// pages/VaultPage.jsx
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
-export default function Vault() {
-  const [accounts, setAccounts] = useState([]);
-  const [form, setForm] = useState({ platform: '', username: '', password: '' });
+export default function VaultPage() {
+  const [service, setService] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [entries, setEntries] = useState([]);
 
-  const loadAccounts = async () => {
-    try {
-      const res = await API.get('/accounts');
-      setAccounts(res.data);
-    } catch (err) {
-      alert('Error loading accounts');
-    }
-  };
-
-  const saveAccount = async () => {
-    if (!form.platform || !form.username || !form.password) {
-      alert('All fields required');
-      return;
-    }
-    try {
-      await API.post('/accounts', form);
-      setForm({ platform: '', username: '', password: '' });
-      loadAccounts();
-    } catch (err) {
-      alert('Error saving account');
-    }
-  };
-
-  const deleteAccount = async (platform) => {
-    try {
-      await API.delete(`/accounts/${platform}`);
-      loadAccounts();
-    } catch (err) {
-      alert('Error deleting');
-    }
+  const fetchPasswords = async () => {
+    const res = await axios.get('http://localhost:3000/passwords');
+    setEntries(res.data);
   };
 
   useEffect(() => {
-    loadAccounts();
+    fetchPasswords();
   }, []);
 
-  return (
-    <div>
-      <h2>Vault</h2>
-      <input
-        type="text"
-        placeholder="Platform"
-        value={form.platform}
-        onChange={(e) => setForm({ ...form, platform: e.target.value })}
-      />
-      <input
-        type="text"
-        placeholder="Username"
-        value={form.username}
-        onChange={(e) => setForm({ ...form, username: e.target.value })}
-      />
-      <input
-        type="text"
-        placeholder="Password"
-        value={form.password}
-        onChange={(e) => setForm({ ...form, password: e.target.value })}
-      />
-      <br />
-      <button onClick={saveAccount}>Save</button>
+  const handleSave = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('http://localhost:3000/save-password', {
+        service,
+        username,
+        password,
+      });
+      setService('');
+      setUsername('');
+      setPassword('');
+      fetchPasswords();
+    } catch (err) {
+      alert(err.response?.data?.msg || 'Error saving password.');
+    }
+  };
 
-      <div style={{ marginTop: '20px' }}>
-        {accounts.map((acc) => (
-          <div key={acc.platform} style={{ background: '#eee', padding: '10px', marginTop: '10px' }}>
-            <p><strong>{acc.platform}</strong></p>
-            <p>Username: {acc.username}</p>
-            <p>Password: {acc.password}</p>
-            <button onClick={() => deleteAccount(acc.platform)}>Delete</button>
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleSave} className="space-y-4">
+        <input
+          type="text"
+          placeholder="Service (e.g., Facebook)"
+          className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+          value={service}
+          onChange={(e) => setService(e.target.value)}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Username"
+          className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <button
+          type="submit"
+          className="w-full py-2 bg-green-600 hover:bg-green-700 rounded text-white font-semibold"
+        >
+          Save Password
+        </button>
+      </form>
+
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">Saved Passwords:</h2>
+        {entries.map((entry, idx) => (
+          <div
+            key={idx}
+            className="bg-gray-800 p-4 rounded text-sm border border-gray-700"
+          >
+            <p><strong>Service:</strong> {entry.service}</p>
+            <p><strong>Username:</strong> {entry.username}</p>
+            <p><strong>Password:</strong> {entry.password}</p>
           </div>
         ))}
       </div>
